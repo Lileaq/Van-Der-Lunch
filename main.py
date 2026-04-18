@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 
+from logger import logger
 from database_configuration import Base, Restaurant, get_db
 from routes import user
 
@@ -11,6 +12,7 @@ app = FastAPI(title="Van Der Lunch -  food delivery service",
 app.include_router(user.router)
 @app.get("/")
 async def root():
+    logger.info('Hit /root')
     return {"message": "Hello World"}
 
 #return random restaurant info to test db connection
@@ -31,5 +33,6 @@ async def test_connection(db: Session = Depends(get_db)):
     }
 
 
+logger.info("API is running")
 
 
