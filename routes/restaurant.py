@@ -13,22 +13,24 @@ from passlib.context import CryptContext
 import jwt
 from datetime import datetime, timedelta
 from logger import logger
+from routes.user import get_current_user
 
 router = APIRouter(
     prefix="/restaurant",
     tags=["restaurant"]
 )
 
-@router.get('/restaurants')
+@router.get('/restaurants-list')
 async def restaurant_list(
         db: AsyncSession = Depends(get_db),
+        user: str = Depends(get_current_user),
         # user criteria
         lat : Optional[float] = None,
         lng : Optional[float] = None,
         tags : Optional[list[int]] = Query(None)
 ):
     # returns the list of restaurants that check the criteria loation and/or type_tags
-    logger.info("Hit /restaurants")
+    logger.info("Hit /restaurants-list")
     try:
         query = select(Restaurant).options(selectinload(Restaurant.tags))
         filters = []
@@ -61,10 +63,11 @@ async def restaurant_list(
         raise HTTPException(status_code=500, detail="restaurant list failed")
 
 
-@router.get("/restaurant/{id}/menu")
+@router.get("/{id}/menu")
 async def info(
         id : int,
-        db : AsyncSession = Depends(get_db)
+        db : AsyncSession = Depends(get_db),
+        user: str = Depends(get_current_user)
 ):
 
     # gets restaurant menu based on id
@@ -75,10 +78,12 @@ async def info(
     return {"food_items" : food_items}
 
 
-@router.get("/restaurant/{id}")
+@router.get("/{id}")
 async def info(
         id : int,
-        db : AsyncSession = Depends(get_db)):
+        db : AsyncSession = Depends(get_db),
+        user: str = Depends(get_current_user)
+):
     # gets full restaurant info based on id
     logger.info("Hit /restaurant/id")
     try:
@@ -90,10 +95,11 @@ async def info(
         logger.info(f"restaurants info failed : {e}")
         raise HTTPException(status_code=500, detail="restaurant info failed")
 
-@router.get("/restaurant/{id}/reviews")
+@router.get("/{id}/reviews")
 async def info(
         id : int,
-        db : AsyncSession = Depends(get_db)
+        db : AsyncSession = Depends(get_db),
+        user: str = Depends(get_current_user)
 ):
     # gets restaurant reviews based on id
     logger.info("Hit /restaurant/id/reviews")
@@ -106,3 +112,18 @@ async def info(
         logger.info(f"restaurants reviews failed : {e}")
         raise HTTPException(status_code=500, detail="restaurant reviews failed")
 
+@router.get("food/{id}")
+async def food_info(
+        id : int,
+        db : AsyncSession = Depends(get_db),
+        user: str = Depends(get_current_user)
+):
+    logger.info("Hit /food/id/")
+    try:
+        query = select(FoodItem).where(FoodItem.id == id)
+        result = await db.execute(query)
+        reviews = result.scalars().all()
+        return {"food-info": reviews}
+    except Exception as e:
+        logger.info(f"food info failed : {e}")
+        raise HTTPException(status_code=500, detail="food info failed")

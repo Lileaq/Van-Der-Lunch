@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from logger import logger
 from database_configuration import Base, Restaurant, get_db
-from routes import user,restaurant
+from routes import user,restaurant,reviews
 
 
 
@@ -13,6 +13,7 @@ app = FastAPI(title="Van Der Lunch -  food delivery service",
 
 app.include_router(user.router)
 app.include_router(restaurant.router)
+app.include_router(reviews.router)
 
 from fastapi.middleware.cors import CORSMiddleware
 
