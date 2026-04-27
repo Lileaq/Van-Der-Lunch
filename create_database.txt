@@ -1,164 +1,178 @@
-CREATE DATABASE `van-der-data`;
 
-CREATE USER 'Dutch'@'localhost' IDENTIFIED BY 'password123';
-GRANT ALL PRIVILEGES ON `van-der-data`.* TO 'Dutch'@'localhost';
-FLUSH PRIVILEGES;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
-
-
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    lat DECIMAL(10,8),
-    lng DECIMAL(11,8)
-);
+DROP DATABASE IF EXISTS `van-der-data`;
+CREATE DATABASE `van-der-data` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `van-der-data`;
 
 
-CREATE TABLE tags (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
-);
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `lat` decimal(10,8) DEFAULT NULL,
+  `lng` decimal(11,8) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `restaurants` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `lat` decimal(10,8) DEFAULT NULL,
+  `lng` decimal(11,8) DEFAULT NULL,
+  `opening_hours` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `tags` (
+  `id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `food_items` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `base_price` decimal(10,2) DEFAULT NULL,
+  `availability` tinyint(1) DEFAULT 1,
+  `description` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `restaurant_id` int(11) DEFAULT NULL,
+  `status` enum('cart','not paid','paid','preparing','on_the_way','completed','canceled') DEFAULT 'cart',
+  `total_price` decimal(10,2) DEFAULT 0.00,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `route` text DEFAULT NULL,
+  `delivery_time` float DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `couriers` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `current_order_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `food_tags` (
+  `food_item_id` int(11) NOT NULL,
+  `tag_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `order_items` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) DEFAULT NULL,
+  `food_item_id` int(11) DEFAULT NULL,
+  `quantity` int(11) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `restaurant_opening_hours` (
+  `id` int(11) NOT NULL,
+  `restaurant_id` int(11) NOT NULL,
+  `day_of_week` int(11) NOT NULL COMMENT '0=Pon, 6=Niedz',
+  `open_time` int(11) NOT NULL COMMENT 'Minuty od północy',
+  `close_time` int(11) NOT NULL COMMENT 'Minuty od północy',
+  `is_closed` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `restaurant_tags` (
+  `restaurant_id` int(11) NOT NULL,
+  `tag_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `reviews` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `restaurant_id` int(11) DEFAULT NULL,
+  `stars` int(11) DEFAULT NULL CHECK (`stars` >= 1 and `stars` <= 5),
+  `review_text` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
-CREATE TABLE restaurants (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    opening_hours VARCHAR(255),
-    address VARCHAR(255),
-    lat DECIMAL(10,8),
-    lng DECIMAL(11,8)
-);
+INSERT INTO `users` (`id`, `email`, `password`, `lat`, `lng`) VALUES
+(1, 'jan.kowalski@example.com', 'haslo123', 52.22967560, 21.01222870),
+(2, 'anna.nowak@example.com', 'haslo321', 52.23195810, 21.00672490),
+(3, 'piotr.zielinski@example.com', 'qwerty', 52.24011230, 21.03056120),
+(4, 'john', '$2b$12$o5jWmfknT0wLNZjC.uD9EOKKT2IHpmTJwwCVCXERM9.IjPQeOas.i', 52.24011230, 21.03056120),
+(5, 'hejka', '$2b$12$KFyh2BG1rVsVoUOyj7SkZurxwkSVJwfsxYcPqvrTeV9m9MRdIHQ/u', 53.24011230, 21.03056120);
+
+INSERT INTO `restaurants` (`id`, `name`, `address`, `lat`, `lng`, `opening_hours`) VALUES
+(1, 'Pizzeria Bella', 'ul. Główna 5, Warszawa', 52.22970000, 21.01220000, '09:00 - 22:00'),
+(2, 'Burger King', 'ul. Aleje Jerozolimskie 50, Warszawa', 52.23000000, 21.01000000, '10:00 - 23:00'),
+(3, 'Zielony Talerz', 'ul. Chmielna 25, Warszawa', 52.22600000, 21.00900000, '08:00 - 20:00');
+
+INSERT INTO `tags` (`id`, `name`) VALUES
+(1, 'Pizza'), (2, 'Włoska'), (3, 'Burger'), (4, 'Fast Food'), 
+(5, 'Wege'), (6, 'Ostre'), (7, 'Napój'), (8, 'Zdrowe');
+
+INSERT INTO `food_items` (`id`, `restaurant_id`, `name`, `base_price`, `availability`, `description`) VALUES
+(1, 1, 'Margherita', 25.00, 1, 'Klasyk: pomidory i mozzarella'),
+(2, 1, 'Diavola', 32.00, 1, 'Pikantne salami i oliwa chili'),
+(3, 2, 'Classic Burger', 20.00, 1, 'Wołowina, sałata, ogórek'),
+(4, 2, 'Frytki', 10.00, 1, 'Złociste i chrupiące'),
+(5, 3, 'Sałatka Tofu', 28.00, 1, 'Tofu marynowane, mix sałat'),
+(6, 3, 'Smoothie Jarmuż', 15.00, 1, 'Bomba witaminowa');
+
+INSERT INTO `restaurant_tags` (`restaurant_id`, `tag_id`) VALUES
+(1, 1), (1, 2), (2, 3), (2, 4), (3, 5), (3, 8);
+
+INSERT INTO `food_tags` (`food_item_id`, `tag_id`) VALUES
+(1, 1), (1, 5), (2, 1), (2, 6), (3, 3), (4, 5), (5, 5), (5, 8), (6, 5), (6, 7);
+
+INSERT INTO `orders` (`id`, `user_id`, `restaurant_id`, `status`, `total_price`, `created_at`) VALUES
+(1, 1, 1, 'completed', 57.00, '2026-04-20 17:54:53'),
+(2, 2, 3, 'paid', 43.00, '2026-04-20 17:54:53'),
+(3, 3, 2, 'cart', 0.00, '2026-04-20 17:54:53');
+
+INSERT INTO `order_items` (`order_id`, `food_item_id`, `quantity`) VALUES
+(1, 1, 1), (1, 2, 1), (2, 5, 1), (2, 6, 1), (3, 3, 2);
+
+INSERT INTO `couriers` (`id`, `name`, `current_order_id`) VALUES
+(1, 'Kamil', 2), (2, 'Magda', NULL), (3, 'Artur Morgan', NULL);
+
+INSERT INTO `reviews` (`id`, `user_id`, `restaurant_id`, `stars`, `review_text`) VALUES
+(1, 1, 1, 5, 'Najlepsza pizza na cienkim cieście!'),
+(3, 1, 2, 1, 'Czekałem 2 godziny. Nigdy więcej!');
+
+INSERT INTO `restaurant_opening_hours` (`id`, `restaurant_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`) VALUES
+(1, 1, 0, 540, 1320, 0), (2, 1, 1, 540, 1320, 0), (3, 1, 2, 540, 1320, 0),
+(4, 1, 3, 540, 1320, 0), (5, 1, 4, 540, 1440, 0), (6, 1, 5, 600, 1440, 0), (7, 1, 6, 0, 0, 1);
 
 
-CREATE TABLE restaurant_tags (
-    restaurant_id INT,
-    tag_id INT,
-    PRIMARY KEY (restaurant_id, tag_id),
-    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-);
+ALTER TABLE `couriers` ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `current_order_id` (`current_order_id`);
+ALTER TABLE `food_items` ADD PRIMARY KEY (`id`), ADD KEY `restaurant_id` (`restaurant_id`);
+ALTER TABLE `food_tags` ADD PRIMARY KEY (`food_item_id`,`tag_id`), ADD KEY `tag_id` (`tag_id`);
+ALTER TABLE `orders` ADD PRIMARY KEY (`id`), ADD KEY `user_id` (`user_id`), ADD KEY `restaurant_id` (`restaurant_id`);
+ALTER TABLE `order_items` ADD PRIMARY KEY (`id`), ADD KEY `order_id` (`order_id`), ADD KEY `food_item_id` (`food_item_id`);
+ALTER TABLE `restaurants` ADD PRIMARY KEY (`id`);
+ALTER TABLE `restaurant_opening_hours` ADD PRIMARY KEY (`id`), ADD KEY `fk_restaurant_hours` (`restaurant_id`);
+ALTER TABLE `restaurant_tags` ADD PRIMARY KEY (`restaurant_id`,`tag_id`), ADD KEY `tag_id` (`tag_id`);
+ALTER TABLE `reviews` ADD PRIMARY KEY (`id`), ADD KEY `user_id` (`user_id`), ADD KEY `restaurant_id` (`restaurant_id`);
+ALTER TABLE `tags` ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `name` (`name`);
+ALTER TABLE `users` ADD PRIMARY KEY (`id`), ADD UNIQUE KEY `email` (`email`);
+
+ALTER TABLE `couriers` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `food_items` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+ALTER TABLE `orders` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `order_items` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+ALTER TABLE `restaurants` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `restaurant_opening_hours` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+ALTER TABLE `reviews` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `tags` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+ALTER TABLE `users` MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 
-CREATE TABLE food_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    restaurant_id INT,
-    name VARCHAR(255) NOT NULL,
-    base_price DECIMAL(10,2),
-    availability BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
-);
+ALTER TABLE `couriers` ADD CONSTRAINT `couriers_ibfk_1` FOREIGN KEY (`current_order_id`) REFERENCES `orders` (`id`) ON DELETE SET NULL;
+ALTER TABLE `food_items` ADD CONSTRAINT `food_items_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE;
+ALTER TABLE `food_tags` ADD CONSTRAINT `food_tags_ibfk_1` FOREIGN KEY (`food_item_id`) REFERENCES `food_items` (`id`) ON DELETE CASCADE, ADD CONSTRAINT `food_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE;
+ALTER TABLE `orders` ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL, ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE SET NULL;
+ALTER TABLE `order_items` ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE, ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`food_item_id`) REFERENCES `food_items` (`id`) ON DELETE CASCADE;
+ALTER TABLE `restaurant_opening_hours` ADD CONSTRAINT `fk_restaurant_hours` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE;
+ALTER TABLE `restaurant_tags` ADD CONSTRAINT `restaurant_tags_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE, ADD CONSTRAINT `restaurant_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE;
+ALTER TABLE `reviews` ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL, ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE;
 
-
-CREATE TABLE food_tags (
-    food_item_id INT,
-    tag_id INT,
-    PRIMARY KEY (food_item_id, tag_id),
-    FOREIGN KEY (food_item_id) REFERENCES food_items(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-);
-
-
-CREATE TABLE orders (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    restaurant_id INT,
-    status ENUM('cart', 'not paid', 'paid', 'preparing', 'on the way', 'completed', 'canceled') DEFAULT 'cart',
-    total_price DECIMAL(10,2) DEFAULT 0.00,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL
-);
-
-CREATE TABLE order_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT,
-    food_item_id INT,
-    quantity INT DEFAULT 1,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (food_item_id) REFERENCES food_items(id) ON DELETE CASCADE
-);
-
-
-CREATE TABLE couriers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255),
-    current_order_id INT UNIQUE,
-    FOREIGN KEY (current_order_id) REFERENCES orders(id) ON DELETE SET NULL
-);
-
-CREATE TABLE reviews (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    restaurant_id INT,
-    stars INT CHECK(stars >= 1 AND stars <= 5),
-    review_text TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
-);
-
-
-
-INSERT INTO users (email, password, lat, lng) VALUES
-('jan.kowalski@example.com', 'haslo123', 52.22967560, 21.01222870),
-('anna.nowak@example.com', 'haslo321', 52.23195810, 21.00672490),
-('piotr.zielinski@example.com', 'qwerty', 52.24011230, 21.03056120);
-
-INSERT INTO tags (name) VALUES
-('Pizza'), ('Włoska'), ('Burger'), ('Fast Food'), ('Wege'), ('Ostre'), ('Napój'), ('Zdrowe');
-
-INSERT INTO restaurants (name, opening_hours, address, lat, lng) VALUES
-('Pizzeria Bella', '10:00-22:00', 'ul. Główna 5, Warszawa', 52.22970000, 21.01220000),
-('Burger King', '09:00-23:00', 'ul. Aleje Jerozolimskie 50, Warszawa', 52.23000000, 21.01000000),
-('Zielony Talerz', '08:00-20:00', 'ul. Chmielna 25, Warszawa', 52.22600000, 21.00900000);
-
-INSERT INTO restaurant_tags (restaurant_id, tag_id) VALUES
-(1, 1), (1, 2), -- Bella to Pizza i Włoska
-(2, 3), (2, 4), -- Burger King to Burger i Fast Food
-(3, 5), (3, 8); -- Zielony Talerz to Wege i Zdrowe
-
-
-INSERT INTO food_items (restaurant_id, name, base_price, availability) VALUES
-(1, 'Margherita', 25.00, TRUE),      -- id 1
-(1, 'Diavola', 32.00, TRUE),         -- id 2
-(2, 'Classic Burger', 20.00, TRUE),  -- id 3
-(2, 'Frytki', 10.00, TRUE),          -- id 4
-(3, 'Sałatka Tofu', 28.00, TRUE),    -- id 5
-(3, 'Smoothie Jarmuż', 15.00, TRUE); -- id 6
-
-
-INSERT INTO food_tags (food_item_id, tag_id) VALUES
-(1, 1), (1, 5),
-(2, 1), (2, 6),
-(3, 3),
-(4, 5),
-(5, 5), (5, 8),
-(6, 5), (6, 7);
-
-
-INSERT INTO orders (user_id, restaurant_id, status, total_price) VALUES
-(1, 1, 'completed', 57.00),
-(2, 3, 'on the way', 43.00),
-(3, 2, 'cart', 0.00),
-(1, 2, 'canceled', 20.00);
-
-
-INSERT INTO order_items (order_id, food_item_id, quantity) VALUES
-(1, 1, 1), (1, 2, 1),
-(2, 5, 1), (2, 6, 1),
-(3, 3, 2),
-(4, 3, 1);
-
-
-INSERT INTO couriers (name, current_order_id) VALUES
-('Kamil', 2),
-('Magda', NULL),
-('Artur Morgan', NULL);
-
-
-INSERT INTO reviews (user_id, restaurant_id, stars, review_text) VALUES
-(1, 1, 5, 'Najlepsza pizza na cienkim cieście!'),
-(2, 3, 4, 'Bardzo dobre, ale smoothie mogłoby być chłodniejsze.'),
-(1, 2, 1, 'Czekałem 2 godziny. Nigdy więcej!');
+COMMIT;

@@ -1,20 +1,11 @@
 import nh3
-from fastapi import FastAPI, Depends, APIRouter, HTTPException, Request, Query
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from sqlalchemy import select, and_, func, delete
-from sqlalchemy.orm import selectinload
+from fastapi import Depends, APIRouter, HTTPException
+from sqlalchemy import select, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
-from typing import Optional
-
-from database_configuration import get_db,Restaurant,FoodItem,Review,User
-from passlib.context import CryptContext
-import jwt
-from datetime import datetime, timedelta
+from database_configuration import get_db,Review
 from logger import logger
 from routes.user import get_current_user
-from schemas import ReviewCreate
+from schemas import ReviewCreate, ReviewsResponse, ReviewCreatedResponse, UserReviewsResponse, RegularSuccessResponse
 
 router = APIRouter(
     prefix="/reviews",
@@ -22,15 +13,22 @@ router = APIRouter(
 )
 
 
-@router.post("/")
+@router.post(
+    "/create",
+    summary="Create a new review",
+    description="Submits a new restaurant review",
+    response_model=ReviewCreatedResponse,
+    status_code=201
+)
 async def make_review(
         data : ReviewCreate,
+        user: dict = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
 ):
     logger.info("Hit /reviews create new review")
     # create review based on the data sent
     new_review = Review(
-        user_id=data.user_id,
+        user_id=user["id"],
         restaurant_id=data.restaurant_id,
         stars=data.stars,
         review_text=data.review_text,
@@ -42,14 +40,24 @@ async def make_review(
         await db.refresh(new_review)  # Pobiera ID nadane przez bazę
         return {"msg": "Review created", "review_id": new_review.id}
     except Exception as e:
-        logger.info(f"create review failed : {e}")
-        raise HTTPException(status_code=500, detail="create review failed")
+        logger.info(f"Create review failed : {e}")
+        raise HTTPException(status_code=500, detail="Create review failed")
 
-    return
 
-@router.get("/{user_id}")
+
+@router.get(
+    "/{user_id}",
+    summary="Get reviews by user",
+    description="Returns a list of all reviews submitted by a specific user.",
+    response_model=UserReviewsResponse,
+    responses={
+        200: {"description": "List of users reviews"},
+        500: {"description": "Get users reviews failed"}
+    }
+)
 async def get_user_reviews(
-        user_id : int,
+        user_id: int,
+        user: dict = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
 ):
     # get users reviews list, also sorted by starts or time
@@ -65,16 +73,44 @@ async def get_user_reviews(
 
 
 
-@router.get("/{restaurant_id}")
-async def get_restaurant_reviews():
-    # get restaurant reviews list also sorted by stars or time
-    # copy from other file
-    return
+@router.get(
+    "/{restaurant_id}",
+    summary="Get restaurant reviews",
+    description="Returns a list of all user reviews for the specified restaurant.",
+    response_model=ReviewsResponse,
+    responses={404: {"description": "Restaurant reviews not found"}}
+)
+async def info(
+        restaurant_id : int,
+        db : AsyncSession = Depends(get_db),
+        user: dict = Depends(get_current_user)
+):
+    # gets restaurant reviews based on id
+    logger.info("Hit /restaurant/id/reviews")
+    try:
+        query = select(Review).where(Review.restaurant_id == restaurant_id)
+        result = await db.execute(query)
+        reviews = result.scalars().all()
+    except Exception as e:
+        logger.info(f"restaurants reviews failed : {e}")
+        raise HTTPException(status_code=500, detail="restaurant reviews failed")
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Restaurant reviews not found")
+    return {"reviews": reviews}
 
-@router.delete("/{review_id}")
+
+@router.delete("/{review_id}",
+    summary="Delete a review",
+    description="Deletes a specific review. Only the author of the review can delete it.",
+    response_model=RegularSuccessResponse,
+    responses={
+        200: {"description": "Review deleted"},
+        404: {"description": "Review not found or unauthorized"},
+        500: {"description": "Delete review failed"}
+    })
 async def delete_review(
         review_id : int,
-        user_email: str = Depends(get_current_user),
+        user: dict = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
 
 ):
@@ -82,18 +118,10 @@ async def delete_review(
     logger.info("Hit /review/{review_id} delete review")
     # get users id
     try:
-        user_query = select(User).where(User.email == user_email)
-        result = await db.execute(user_query)
-        user = result.scalars().first()
-
-        # delete the review if user id matches
-        query = (
-            delete(Review)
-            .where(
-                and_(
-                    Review.id == review_id,
-                    Review.user_id == user.id
-                )
+        query = delete(Review).where(
+            and_(
+                Review.id == review_id,
+                Review.user_id == user["id"]
             )
         )
 
@@ -103,10 +131,10 @@ async def delete_review(
         if result.rowcount == 0:
             raise HTTPException(
                 status_code=404,
-                detail="Review not found"
+                detail="Review not found or you don't have permission to delete it"
             )
 
         return {"msg": f"Review {review_id} deleted successfully"}
     except Exception as e:
-        logger.info(f"delete review failed : {e}")
-        raise HTTPException(status_code=500, detail="delete review failed")
+        logger.info(f"Delete review failed : {e}")
+        raise HTTPException(status_code=500, detail="Delete review failed")

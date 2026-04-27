@@ -1,0 +1,17 @@
+
+fastapi
+uvicorn[standard]
+
+sqlalchemy[asyncio]
+asyncmy
+
+passlib[bcrypt]
+PyJWT
+python-multipart
+
+nh3
+polyline
+requests
+pydantic[email]
+
+pydantic-settings
