@@ -1,14 +1,3 @@
-Van Der Lunch - food delivery service
-
-
-How to start 
-install requirements - pip install -r requirements.txt
-create database based on create_database.txt
-create enviromental databse for the database -> DATABASE_URL=mysql+asyncmy://Dutch:password123@localhost/van-der-data
-run the api -> uvicorn main:app --reload
-Gotowe! Twoje API działa pod adresem: http://127.0.0.1:8000
-Dokumentację znajdziesz tutaj: http://127.0.0.1:8000/docs
-
 # Van Der Lunch
 API for food delivery service
 
