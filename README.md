@@ -3,7 +3,6 @@ API for food delivery service
 
 ---
 
-##Quick Start Guide
 
 
 ### 1. Install Dependencies
