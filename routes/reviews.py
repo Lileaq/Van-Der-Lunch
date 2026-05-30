@@ -46,7 +46,7 @@ async def make_review(
 
 
 @router.get(
-    "/{user_id}",
+    "/user/{user_id}",
     summary="Get reviews by user",
     description="Returns a list of all reviews submitted by a specific user.",
     response_model=UserReviewsResponse,
@@ -61,6 +61,7 @@ async def get_user_reviews(
         db: AsyncSession = Depends(get_db)
 ):
     # get users reviews list, also sorted by starts or time
+    logger.info("Hit /reviews/user/user_id")
     try:
         query = select(Review).where(Review.user_id == user_id)
         result = await db.execute(query)
@@ -74,7 +75,7 @@ async def get_user_reviews(
 
 
 @router.get(
-    "/{restaurant_id}",
+    "/restaurant/{restaurant_id}",
     summary="Get restaurant reviews",
     description="Returns a list of all user reviews for the specified restaurant.",
     response_model=ReviewsResponse,
@@ -86,7 +87,7 @@ async def info(
         user: dict = Depends(get_current_user)
 ):
     # gets restaurant reviews based on id
-    logger.info("Hit /restaurant/id/reviews")
+    logger.info("Hit /reviews/restaurant/restaurant_id")
     try:
         query = select(Review).where(Review.restaurant_id == restaurant_id)
         result = await db.execute(query)
