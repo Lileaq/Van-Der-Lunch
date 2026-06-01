@@ -111,7 +111,7 @@ class Review(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     stars = Column(Integer,nullable=True)
     review_text = Column(Text, nullable=True)
-    created_at = Column(DateTime)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     restaurant = relationship("Restaurant", back_populates="reviews")
     user = relationship("User", back_populates="reviews")

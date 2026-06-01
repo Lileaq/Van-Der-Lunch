@@ -28,7 +28,7 @@ def is_restaurant_open(opening_hours_list):
         if oh.day_of_week == current_day:
             if oh.is_closed:
                 return False
-            return oh.open_from_minute <= current_minutes <= oh.close_to_minute
+            return oh.open_time <= current_minutes <= oh.close_time
 
     return False
 
